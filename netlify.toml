@@ -2,7 +2,7 @@
   functions = "netlify/functions"
 
 [functions."conjugate"]
-  timeout = 26
+  timeout = 40
 
 [[redirects]]
   from = "/*"
