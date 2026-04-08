@@ -10,7 +10,7 @@ exports.handler = async function(event) {
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY environment variable is not set' })
+      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY is not set' })
     };
   }
 
@@ -19,44 +19,24 @@ exports.handler = async function(event) {
     const body = JSON.parse(event.body);
     verbs = body.verbs;
     if (!verbs || typeof verbs !== 'string' || verbs.trim().length === 0) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'No verbs provided' }) };
+      return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'No verbs provided' }) };
     }
   } catch(e) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
+    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid request body' }) };
   }
 
-  const prompt = `You are a French grammar expert. Generate quiz questions for the following French verbs.
+  const prompt = `Generate French verb conjugation quiz questions as a JSON array.
 
 VERBS: ${verbs.trim()}
 
-Generate conjugations for ALL verbs listed across ALL these tenses:
-- présent (all 6 subjects: je, tu, il/elle, nous, vous, ils/elles)
-- passé composé (4 subjects)
-- imparfait (4 subjects)
-- futur simple (4 subjects)
-- conditionnel (4 subjects)
-- conditionnel passé (3 subjects)
-- plus-que-parfait (3 subjects)
-- subjonctif présent (4 subjects using "que je", "que tu", "qu'il/elle", "que nous", "que vous", "qu'ils/elles")
+For each verb generate questions for: présent (6 subjects), passé composé (3 subjects), imparfait (3 subjects), futur simple (3 subjects), conditionnel (3 subjects), conditionnel passé (2 subjects), plus-que-parfait (2 subjects), subjonctif présent (3 subjects). Also stem questions: futur/cond stem, participe passé, auxiliaire if être.
 
-Also add STEM questions for each verb:
-- futur/conditionnel stem (e.g. "saur-")
-- participe passé
-- subjonctif stem only if irregular
-- auxiliaire only if être (not avoir)
-
-RULES:
-- Use correct French accents on all words
-- For être-verbs (naître, mourir, aller, venir, partir, etc.) use être as auxiliary
-- Do NOT include any hints or explanations in the answers
-
-Return ONLY a raw JSON array — no markdown fences, no backticks, no explanation text before or after.
-Each object must have exactly these 5 keys:
-"verb" (infinitive string), "tense" (French tense name string), "k" (one of: present/passe/imparfait/futur/cond/condp/plusque/subj/stem), "sub" (subject pronoun string), "ans" (correct conjugation string)`;
+Output ONLY a JSON array, nothing else, no markdown. Each item: {"verb":"...","tense":"...","k":"...","sub":"...","ans":"..."}
+k must be one of: present, passe, imparfait, futur, cond, condp, plusque, subj, stem`;
 
   const requestBody = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4000,
+    max_tokens: 3000,
     messages: [{ role: 'user', content: prompt }]
   });
 
@@ -83,37 +63,37 @@ Each object must have exactly these 5 keys:
       req.end();
     });
 
-    const data = JSON.parse(responseText);
-
-    if (data.error) {
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Anthropic API error: ' + data.error.message })
-      };
+    let apiResponse;
+    try {
+      apiResponse = JSON.parse(responseText);
+    } catch(e) {
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Could not parse Anthropic response: ' + responseText.slice(0, 200) }) };
     }
 
-    const raw = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+    if (apiResponse.error) {
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Anthropic error: ' + apiResponse.error.message }) };
+    }
+
+    if (!apiResponse.content || !apiResponse.content.length) {
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Empty response from Claude', raw: JSON.stringify(apiResponse).slice(0, 300) }) };
+    }
+
+    const raw = apiResponse.content.filter(c => c.type === 'text').map(c => c.text).join('');
+
     const match = raw.match(/\[[\s\S]*\]/);
-const clean = match ? match[0] : raw.replace(/```json|```/gi, '').trim();
+    if (!match) {
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'No JSON array found. Claude said: ' + raw.slice(0, 300) }) };
+    }
 
     let parsed;
     try {
-      parsed = JSON.parse(clean);
+      parsed = JSON.parse(match[0]);
     } catch(e) {
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Could not parse Claude response as JSON' })
-      };
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'JSON parse failed: ' + e.message + ' | Raw: ' + match[0].slice(0, 200) }) };
     }
 
     if (!Array.isArray(parsed) || parsed.length < 5) {
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Response was not a valid question array' })
-      };
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Array too short: ' + parsed.length + ' items' }) };
     }
 
     return {
@@ -123,10 +103,6 @@ const clean = match ? match[0] : raw.replace(/```json|```/gi, '').trim();
     };
 
   } catch(e) {
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Function error: ' + e.message })
-    };
+    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Function error: ' + e.message }) };
   }
 };
