@@ -94,7 +94,8 @@ Each object must have exactly these 5 keys:
     }
 
     const raw = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
-    const clean = raw.replace(/```json|```/gi, '').trim();
+    const match = raw.match(/\[[\s\S]*\]/);
+const clean = match ? match[0] : raw.replace(/```json|```/gi, '').trim();
 
     let parsed;
     try {
