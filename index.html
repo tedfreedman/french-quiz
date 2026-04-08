@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>French Verb Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f7f6f3; --white: #ffffff; --border: #e4e2dd; --border2: #d0cdc6;
+  --text: #1a1916; --sub: #7a776e; --hint: #aaa89f;
+  --accent: #2563eb; --accent-light: #eff4ff;
+  --green: #16a34a; --green-bg: #f0fdf4; --green-b: #bbf7d0;
+  --red: #dc2626; --red-bg: #fef2f2; --red-b: #fecaca;
+  --radius: 12px; --radius-sm: 7px;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+nav {
+  background: var(--white); border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 56px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 100;
+}
+.logo { font-weight: 600; font-size: 16px; letter-spacing: -0.02em; }
+.logo span { color: var(--accent); }
+.nav-btn {
+  font-size: 13px; font-weight: 500; color: var(--accent); text-decoration: none;
+  padding: 7px 14px; border: 1.5px solid var(--accent); border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.nav-btn:hover { background: var(--accent-light); }
+
+main { max-width: 560px; margin: 0 auto; padding: 36px 20px 80px; }
+
+.filter-label { font-size: 11px; font-weight: 600; color: var(--hint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+.tense-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 28px; }
+.tense-btn {
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+  padding: 5px 13px; border: 1.5px solid var(--border); border-radius: 99px;
+  background: var(--white); color: var(--sub); cursor: pointer; transition: all 0.12s; white-space: nowrap;
+}
+.tense-btn:hover { border-color: var(--border2); color: var(--text); }
+.tense-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+.stats-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stats-left { display: flex; gap: 16px; }
+.stat-item { font-size: 13px; color: var(--sub); }
+.stat-item strong { color: var(--text); font-weight: 600; }
+.stat-item.correct strong { color: var(--green); }
+.stat-item.wrong strong { color: var(--red); }
+.q-counter { font-size: 13px; color: var(--hint); }
+
+.progress-track { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 24px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+
+.card {
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 28px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.tense-badge {
+  display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.07em; padding: 3px 10px; border-radius: 99px;
+  background: var(--bg); color: var(--sub); border: 1px solid var(--border); margin-bottom: 16px;
+}
+.tense-badge.stem { background: #fefce8; color: #854d0e; border-color: #fde68a; }
+
+.q-subject { font-size: 30px; font-weight: 300; letter-spacing: -0.03em; color: var(--text); margin-bottom: 4px; line-height: 1.2; }
+.q-verb-name { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--hint); margin-bottom: 24px; }
+
+.input-row { display: flex; gap: 10px; }
+.ans-input {
+  flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 16px;
+  padding: 11px 14px; border: 1.5px solid var(--border2); border-radius: var(--radius-sm);
+  background: var(--bg); color: var(--text); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none;
+}
+.ans-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); background: var(--white); }
+.ans-input:disabled { opacity: 0.55; }
+.check-btn {
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+  padding: 11px 20px; border: 1.5px solid var(--border2); border-radius: var(--radius-sm);
+  background: var(--white); color: var(--sub); cursor: pointer; transition: all 0.12s; white-space: nowrap;
+}
+.check-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.feedback {
+  margin-top: 14px; padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; display: none;
+}
+.feedback.show { display: block; }
+.feedback.correct { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-b); }
+.feedback.wrong { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-b); }
+
+.enter-hint { margin-top: 10px; font-size: 12px; color: var(--hint); display: none; }
+.enter-hint.show { display: block; }
+
+.done-card {
+  background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
+  padding: 48px 28px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.04); display: none;
+}
+.done-card.show { display: block; }
+.done-score { font-size: 56px; font-weight: 300; letter-spacing: -0.04em; color: var(--text); margin-bottom: 6px; }
+.done-score span { color: var(--accent); }
+.done-msg { font-size: 15px; color: var(--sub); margin-bottom: 28px; }
+.restart-btn {
+  font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
+  padding: 11px 28px; border: 1.5px solid var(--accent); border-radius: var(--radius-sm);
+  background: var(--accent); color: white; cursor: pointer; transition: opacity 0.15s;
+}
+.restart-btn:hover { opacity: 0.88; }
+
+.quiz-title { font-size: 13px; color: var(--hint); margin-bottom: 20px; }
+.quiz-title strong { color: var(--sub); }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">French<span>4</span>Honors</div>
+  <a href="new.html" class="nav-btn">+ New Quiz</a>
+</nav>
+<main>
+  <div class="filter-label">Filter by tense</div>
+  <div class="tense-bar" id="tense-bar"></div>
+  <div class="stats-row">
+    <div class="stats-left">
+      <div class="stat-item correct">✓ <strong id="sc">0</strong></div>
+      <div class="stat-item wrong">✗ <strong id="sw">0</strong></div>
+    </div>
+    <div class="q-counter">Question <span id="sqn">1</span> of <span id="sqt">—</span></div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+  <div class="card" id="qcard">
+    <div class="tense-badge" id="tbadge"></div>
+    <div class="q-subject" id="qsubject"></div>
+    <div class="q-verb-name" id="qverb"></div>
+    <div class="input-row">
+      <input class="ans-input" id="ans" type="text"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        placeholder="type your answer..." />
+      <button class="check-btn" id="checkbtn">Check</button>
+    </div>
+    <div class="enter-hint" id="ehint">Press Enter to continue →</div>
+    <div class="feedback" id="fb"></div>
+  </div>
+  <div class="done-card" id="donecard">
+    <div class="done-score" id="dfrac"></div>
+    <div class="done-msg" id="dmsg"></div>
+    <button class="restart-btn" id="restartbtn">Try Again</button>
+  </div>
+</main>
+<script>
+const DEFAULT_DATA=[
+  {verb:"recevoir",tense:"présent",k:"present",sub:"je",ans:"reçois"},
+  {verb:"recevoir",tense:"présent",k:"present",sub:"tu",ans:"reçois"},
+  {verb:"recevoir",tense:"présent",k:"present",sub:"il/elle",ans:"reçoit"},
+  {verb:"recevoir",tense:"présent",k:"present",sub:"nous",ans:"recevons"},
+  {verb:"recevoir",tense:"présent",k:"present",sub:"vous",ans:"recevez"},
+  {verb:"recevoir",tense:"présent",k:"present",sub:"ils/elles",ans:"reçoivent"},
+  {verb:"décevoir",tense:"présent",k:"present",sub:"je",ans:"déçois"},
+  {verb:"décevoir",tense:"présent",k:"present",sub:"tu",ans:"déçois"},
+  {verb:"décevoir",tense:"présent",k:"present",sub:"il/elle",ans:"déçoit"},
+  {verb:"décevoir",tense:"présent",k:"present",sub:"nous",ans:"décevons"},
+  {verb:"décevoir",tense:"présent",k:"present",sub:"vous",ans:"décevez"},
+  {verb:"décevoir",tense:"présent",k:"present",sub:"ils/elles",ans:"déçoivent"},
+  {verb:"percevoir",tense:"présent",k:"present",sub:"je",ans:"perçois"},
+  {verb:"percevoir",tense:"présent",k:"present",sub:"tu",ans:"perçois"},
+  {verb:"percevoir",tense:"présent",k:"present",sub:"il/elle",ans:"perçoit"},
+  {verb:"percevoir",tense:"présent",k:"present",sub:"nous",ans:"percevons"},
+  {verb:"percevoir",tense:"présent",k:"present",sub:"vous",ans:"percevez"},
+  {verb:"percevoir",tense:"présent",k:"present",sub:"ils/elles",ans:"perçoivent"},
+  {verb:"connaître",tense:"présent",k:"present",sub:"je",ans:"connais"},
+  {verb:"connaître",tense:"présent",k:"present",sub:"tu",ans:"connais"},
+  {verb:"connaître",tense:"présent",k:"present",sub:"il/elle",ans:"connaît"},
+  {verb:"connaître",tense:"présent",k:"present",sub:"nous",ans:"connaissons"},
+  {verb:"connaître",tense:"présent",k:"present",sub:"vous",ans:"connaissez"},
+  {verb:"connaître",tense:"présent",k:"present",sub:"ils/elles",ans:"connaissent"},
+  {verb:"paraître",tense:"présent",k:"present",sub:"je",ans:"parais"},
+  {verb:"paraître",tense:"présent",k:"present",sub:"tu",ans:"parais"},
+  {verb:"paraître",tense:"présent",k:"present",sub:"il/elle",ans:"paraît"},
+  {verb:"paraître",tense:"présent",k:"present",sub:"nous",ans:"paraissons"},
+  {verb:"paraître",tense:"présent",k:"present",sub:"vous",ans:"paraissez"},
+  {verb:"paraître",tense:"présent",k:"present",sub:"ils/elles",ans:"paraissent"},
+  {verb:"naître",tense:"présent",k:"present",sub:"je",ans:"nais"},
+  {verb:"naître",tense:"présent",k:"present",sub:"tu",ans:"nais"},
+  {verb:"naître",tense:"présent",k:"present",sub:"il/elle",ans:"naît"},
+  {verb:"naître",tense:"présent",k:"present",sub:"nous",ans:"naissons"},
+  {verb:"naître",tense:"présent",k:"present",sub:"vous",ans:"naissez"},
+  {verb:"naître",tense:"présent",k:"present",sub:"ils/elles",ans:"naissent"},
+  {verb:"savoir",tense:"présent",k:"present",sub:"je",ans:"sais"},
+  {verb:"savoir",tense:"présent",k:"present",sub:"tu",ans:"sais"},
+  {verb:"savoir",tense:"présent",k:"present",sub:"il/elle",ans:"sait"},
+  {verb:"savoir",tense:"présent",k:"present",sub:"nous",ans:"savons"},
+  {verb:"savoir",tense:"présent",k:"present",sub:"vous",ans:"savez"},
+  {verb:"savoir",tense:"présent",k:"present",sub:"ils/elles",ans:"savent"},
+  {verb:"recevoir",tense:"passé composé",k:"passe",sub:"j'",ans:"ai reçu"},
+  {verb:"recevoir",tense:"passé composé",k:"passe",sub:"nous",ans:"avons reçu"},
+  {verb:"décevoir",tense:"passé composé",k:"passe",sub:"il/elle",ans:"a déçu"},
+  {verb:"percevoir",tense:"passé composé",k:"passe",sub:"ils/elles",ans:"ont perçu"},
+  {verb:"connaître",tense:"passé composé",k:"passe",sub:"j'",ans:"ai connu"},
+  {verb:"connaître",tense:"passé composé",k:"passe",sub:"vous",ans:"avez connu"},
+  {verb:"paraître",tense:"passé composé",k:"passe",sub:"tu",ans:"as paru"},
+  {verb:"naître",tense:"passé composé",k:"passe",sub:"je",ans:"suis né(e)"},
+  {verb:"naître",tense:"passé composé",k:"passe",sub:"ils",ans:"sont nés"},
+  {verb:"savoir",tense:"passé composé",k:"passe",sub:"j'",ans:"ai su"},
+  {verb:"savoir",tense:"passé composé",k:"passe",sub:"nous",ans:"avons su"},
+  {verb:"recevoir",tense:"imparfait",k:"imparfait",sub:"je",ans:"recevais"},
+  {verb:"recevoir",tense:"imparfait",k:"imparfait",sub:"nous",ans:"recevions"},
+  {verb:"recevoir",tense:"imparfait",k:"imparfait",sub:"ils/elles",ans:"recevaient"},
+  {verb:"connaître",tense:"imparfait",k:"imparfait",sub:"tu",ans:"connaissais"},
+  {verb:"connaître",tense:"imparfait",k:"imparfait",sub:"vous",ans:"connaissiez"},
+  {verb:"paraître",tense:"imparfait",k:"imparfait",sub:"il/elle",ans:"paraissait"},
+  {verb:"naître",tense:"imparfait",k:"imparfait",sub:"nous",ans:"naissions"},
+  {verb:"savoir",tense:"imparfait",k:"imparfait",sub:"je",ans:"savais"},
+  {verb:"savoir",tense:"imparfait",k:"imparfait",sub:"ils/elles",ans:"savaient"},
+  {verb:"décevoir",tense:"imparfait",k:"imparfait",sub:"tu",ans:"décevais"},
+  {verb:"recevoir",tense:"futur simple",k:"futur",sub:"je",ans:"recevrai"},
+  {verb:"recevoir",tense:"futur simple",k:"futur",sub:"nous",ans:"recevrons"},
+  {verb:"recevoir",tense:"futur simple",k:"futur",sub:"ils/elles",ans:"recevront"},
+  {verb:"décevoir",tense:"futur simple",k:"futur",sub:"tu",ans:"décevras"},
+  {verb:"percevoir",tense:"futur simple",k:"futur",sub:"vous",ans:"percevrez"},
+  {verb:"connaître",tense:"futur simple",k:"futur",sub:"je",ans:"connaîtrai"},
+  {verb:"connaître",tense:"futur simple",k:"futur",sub:"ils/elles",ans:"connaîtront"},
+  {verb:"paraître",tense:"futur simple",k:"futur",sub:"il/elle",ans:"paraîtra"},
+  {verb:"naître",tense:"futur simple",k:"futur",sub:"nous",ans:"naîtrons"},
+  {verb:"savoir",tense:"futur simple",k:"futur",sub:"je",ans:"saurai"},
+  {verb:"savoir",tense:"futur simple",k:"futur",sub:"vous",ans:"saurez"},
+  {verb:"savoir",tense:"futur simple",k:"futur",sub:"ils/elles",ans:"sauront"},
+  {verb:"recevoir",tense:"conditionnel",k:"cond",sub:"je",ans:"recevrais"},
+  {verb:"recevoir",tense:"conditionnel",k:"cond",sub:"nous",ans:"recevrions"},
+  {verb:"recevoir",tense:"conditionnel",k:"cond",sub:"ils/elles",ans:"recevraient"},
+  {verb:"connaître",tense:"conditionnel",k:"cond",sub:"tu",ans:"connaîtrais"},
+  {verb:"savoir",tense:"conditionnel",k:"cond",sub:"il/elle",ans:"saurait"},
+  {verb:"savoir",tense:"conditionnel",k:"cond",sub:"vous",ans:"sauriez"},
+  {verb:"décevoir",tense:"conditionnel",k:"cond",sub:"je",ans:"décévrais"},
+  {verb:"paraître",tense:"conditionnel",k:"cond",sub:"nous",ans:"paraîtrions"},
+  {verb:"recevoir",tense:"conditionnel passé",k:"condp",sub:"j'",ans:"aurais reçu"},
+  {verb:"connaître",tense:"conditionnel passé",k:"condp",sub:"nous",ans:"aurions connu"},
+  {verb:"savoir",tense:"conditionnel passé",k:"condp",sub:"il/elle",ans:"aurait su"},
+  {verb:"naître",tense:"conditionnel passé",k:"condp",sub:"je",ans:"serais né(e)"},
+  {verb:"décevoir",tense:"conditionnel passé",k:"condp",sub:"vous",ans:"auriez déçu"},
+  {verb:"percevoir",tense:"conditionnel passé",k:"condp",sub:"ils/elles",ans:"auraient perçu"},
+  {verb:"recevoir",tense:"plus-que-parfait",k:"plusque",sub:"j'",ans:"avais reçu"},
+  {verb:"connaître",tense:"plus-que-parfait",k:"plusque",sub:"tu",ans:"avais connu"},
+  {verb:"savoir",tense:"plus-que-parfait",k:"plusque",sub:"nous",ans:"avions su"},
+  {verb:"naître",tense:"plus-que-parfait",k:"plusque",sub:"il/elle",ans:"était né(e)"},
+  {verb:"décevoir",tense:"plus-que-parfait",k:"plusque",sub:"vous",ans:"aviez déçu"},
+  {verb:"paraître",tense:"plus-que-parfait",k:"plusque",sub:"ils/elles",ans:"avaient paru"},
+  {verb:"recevoir",tense:"subjonctif",k:"subj",sub:"que je",ans:"reçoive"},
+  {verb:"recevoir",tense:"subjonctif",k:"subj",sub:"que nous",ans:"recevions"},
+  {verb:"recevoir",tense:"subjonctif",k:"subj",sub:"qu'ils/elles",ans:"reçoivent"},
+  {verb:"connaître",tense:"subjonctif",k:"subj",sub:"que je",ans:"connaisse"},
+  {verb:"connaître",tense:"subjonctif",k:"subj",sub:"que nous",ans:"connaissions"},
+  {verb:"paraître",tense:"subjonctif",k:"subj",sub:"qu'il/elle",ans:"paraisse"},
+  {verb:"naître",tense:"subjonctif",k:"subj",sub:"que je",ans:"naisse"},
+  {verb:"savoir",tense:"subjonctif",k:"subj",sub:"que je",ans:"sache"},
+  {verb:"savoir",tense:"subjonctif",k:"subj",sub:"que nous",ans:"sachions"},
+  {verb:"savoir",tense:"subjonctif",k:"subj",sub:"qu'ils/elles",ans:"sachent"},
+  {verb:"décevoir",tense:"subjonctif",k:"subj",sub:"que tu",ans:"déçoives"},
+  {verb:"percevoir",tense:"subjonctif",k:"subj",sub:"que vous",ans:"perceviez"},
+  {verb:"recevoir/décevoir/percevoir",tense:"stem",k:"stem",sub:"futur/cond stem",ans:"recevr-/décevr-/percevr-"},
+  {verb:"recevoir",tense:"stem",k:"stem",sub:"participe passé",ans:"reçu"},
+  {verb:"décevoir",tense:"stem",k:"stem",sub:"participe passé",ans:"déçu"},
+  {verb:"percevoir",tense:"stem",k:"stem",sub:"participe passé",ans:"perçu"},
+  {verb:"connaître/paraître/naître",tense:"stem",k:"stem",sub:"futur/cond stem",ans:"connaîtr-/paraîtr-/naîtr-"},
+  {verb:"connaître",tense:"stem",k:"stem",sub:"participe passé",ans:"connu"},
+  {verb:"paraître",tense:"stem",k:"stem",sub:"participe passé",ans:"paru"},
+  {verb:"naître",tense:"stem",k:"stem",sub:"participe passé",ans:"né"},
+  {verb:"naître",tense:"stem",k:"stem",sub:"auxiliaire",ans:"être"},
+  {verb:"savoir",tense:"stem",k:"stem",sub:"futur/cond stem",ans:"saur-"},
+  {verb:"savoir",tense:"stem",k:"stem",sub:"participe passé",ans:"su"},
+  {verb:"savoir",tense:"stem",k:"stem",sub:"subjonctif stem",ans:"sach-"},
+];
+
+const TENSE_LABELS={all:"All",present:"Présent",passe:"Passé composé",imparfait:"Imparfait",futur:"Futur simple",cond:"Conditionnel",condp:"Cond. passé",plusque:"Plus-que-parfait",subj:"Subjonctif",stem:"Stems"};
+
+let DATA=DEFAULT_DATA.slice();
+let mode='all',questions=[],current=0,correct=0,wrong=0,answered=false;
+
+try{const s=localStorage.getItem('fq_data');if(s){const p=JSON.parse(s);if(Array.isArray(p)&&p.length>5)DATA=p;}}catch(e){}
+
+function norm(s){return s.trim().toLowerCase().replace(/[éèêë]/g,'e').replace(/[àâä]/g,'a').replace(/[îï]/g,'i').replace(/[ôö]/g,'o').replace(/[ùûü]/g,'u').replace(/ç/g,'c').replace(/\s+/g,' ');}
+function shuffle(a){const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function $(id){return document.getElementById(id);}
+
+function build(){const pool=mode==='all'?DATA:DATA.filter(q=>q.k===mode);questions=shuffle(pool).slice(0,Math.min(30,pool.length));}
+
+function renderModes(){
+  const bar=$('tense-bar');bar.innerHTML='';
+  Object.entries(TENSE_LABELS).forEach(([k,v])=>{
+    const btn=document.createElement('button');
+    btn.className='tense-btn'+(mode===k?' active':'');
+    btn.textContent=v;
+    btn.addEventListener('click',function(){mode=k;correct=0;wrong=0;current=0;answered=false;$('sc').textContent='0';$('sw').textContent='0';build();renderModes();renderQ();});
+    bar.appendChild(btn);
+  });
+}
+
+function renderQ(){
+  $('qcard').style.display='block';
+  $('donecard').classList.remove('show');
+  const q=questions[current];
+  const isStem=q.k==='stem';
+  $('tbadge').textContent=isStem?'Stems':q.tense;
+  $('tbadge').className='tense-badge'+(isStem?' stem':'');
+  $('qsubject').textContent=q.sub;
+  $('qverb').textContent=q.verb;
+  $('sqn').textContent=current+1;
+  $('sqt').textContent=questions.length;
+  $('prog').style.width=Math.round(current/questions.length*100)+'%';
+  $('fb').className='feedback';$('fb').textContent='';
+  $('ehint').className='enter-hint';
+  answered=false;
+  const inp=$('ans');inp.value='';inp.disabled=false;
+  setTimeout(function(){inp.focus();},50);
+}
+
+function check(){
+  if(answered)return;
+  const val=$('ans').value.trim();if(!val)return;
+  const q=questions[current];
+  const user=norm(val);
+  const accepted=q.ans.split('/').map(function(a){return norm(a.trim());});
+  const ok=accepted.some(function(a){return user===a;});
+  answered=true;$('ans').disabled=true;
+  if(ok){correct++;$('fb').textContent='Correct!';$('fb').className='feedback show correct';}
+  else{wrong++;$('fb').textContent='Answer: '+q.ans;$('fb').className='feedback show wrong';}
+  $('sc').textContent=correct;$('sw').textContent=wrong;
+  $('ehint').className='enter-hint show';
+}
+
+function advance(){current++;if(current>=questions.length){showDone();}else{renderQ();}}
+
+function showDone(){
+  $('qcard').style.display='none';$('donecard').classList.add('show');$('prog').style.width='100%';
+  const pct=Math.round(correct/questions.length*100);
+  $('dfrac').innerHTML='<span>'+correct+'</span>/'+questions.length;
+  $('dmsg').textContent=pct>=90?'Excellent work!':pct>=70?'Good job!':'Keep practicing!';
+}
+
+$('checkbtn').addEventListener('click',function(){if(!answered){check();}else{advance();}});
+$('restartbtn').addEventListener('click',function(){current=0;correct=0;wrong=0;answered=false;$('sc').textContent='0';$('sw').textContent='0';build();renderQ();});
+
+// ENTER KEY — on document, attached once, never removed
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter')return;
+  if($('donecard').classList.contains('show'))return;
+  // Don't interfere if focus is on a button
+  if(document.activeElement&&document.activeElement.tagName==='BUTTON')return;
+  e.preventDefault();
+  if(!answered){check();}else{advance();}
+});
+
+build();renderModes();renderQ();
+</script>
+</body>
+</html>

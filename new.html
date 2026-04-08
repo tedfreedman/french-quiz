@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>French Verb Quiz — New Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f7f6f3;--white:#ffffff;--border:#e4e2dd;--border2:#d0cdc6;
+  --text:#1a1916;--sub:#7a776e;--hint:#aaa89f;
+  --accent:#2563eb;--accent-light:#eff4ff;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-b:#bbf7d0;
+  --red:#dc2626;--red-bg:#fef2f2;--red-b:#fecaca;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-b:#fde68a;
+  --radius:12px;--radius-sm:7px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+nav{
+  background:var(--white);border-bottom:1px solid var(--border);
+  padding:0 24px;height:56px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+}
+.logo{font-weight:600;font-size:16px;letter-spacing:-0.02em;}
+.logo span{color:var(--accent);}
+.nav-back{font-size:13px;font-weight:500;color:var(--sub);text-decoration:none;display:flex;align-items:center;gap:6px;transition:color 0.15s;}
+.nav-back:hover{color:var(--text);}
+
+main{max-width:580px;margin:0 auto;padding:40px 20px 80px;}
+h1{font-size:26px;font-weight:600;letter-spacing:-0.03em;margin-bottom:8px;}
+.page-sub{font-size:14px;color:var(--sub);margin-bottom:36px;line-height:1.6;}
+
+.card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+.card-title{font-size:15px;font-weight:600;margin-bottom:6px;}
+.card-desc{font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:16px;}
+
+textarea{
+  width:100%;font-family:'JetBrains Mono',monospace;font-size:13px;
+  padding:12px 14px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);
+  background:var(--bg);color:var(--text);resize:vertical;outline:none;line-height:1.6;
+  transition:border-color 0.15s,box-shadow 0.15s;
+}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+textarea::placeholder{color:var(--hint);}
+#verb-input{min-height:110px;}
+
+.gen-btn{
+  width:100%;margin-top:14px;padding:13px;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
+  background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);
+  cursor:pointer;transition:opacity 0.15s;
+}
+.gen-btn:hover{opacity:0.88;}
+.gen-btn:disabled{opacity:0.45;cursor:not-allowed;}
+
+/* spinner */
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.35);border-top-color:white;border-radius:50%;animation:spin 0.65s linear infinite;display:none;flex-shrink:0;}
+.spinner.show{display:block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* progress bar under button */
+.gen-progress{height:3px;background:var(--border);border-radius:2px;margin-top:10px;overflow:hidden;display:none;}
+.gen-progress.show{display:block;}
+.gen-progress-fill{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.5s ease;}
+
+/* status */
+.status{margin-top:12px;padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:none;}
+.status.show{display:block;}
+.status.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b);}
+.status.err{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b);}
+.status.info{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b);}
+
+/* example pills */
+.examples{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.pill{font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:99px;color:var(--sub);}
+
+/* info box */
+.info-box{background:var(--accent-light);border:1.5px solid #bfdbfe;border-radius:var(--radius);padding:14px 16px;display:flex;gap:12px;align-items:flex-start;margin-top:20px;}
+.info-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.info-box p{font-size:13px;color:#1e3a8a;line-height:1.6;}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">French<span>4</span>Honors</div>
+  <a href="index.html" class="nav-back">← Back to quiz</a>
+</nav>
+<main>
+  <h1>Load this week's verbs</h1>
+  <p class="page-sub">Paste the verbs from your teacher's sheet. Claude will conjugate everything across all 8 tenses and load it straight into your quiz — no copy-pasting required.</p>
+
+  <div class="card">
+    <div class="card-title">This week's verbs</div>
+    <div class="card-desc">Just the verb list is enough. If you have extra info like irregular stems or participes passés, include those too and Claude will use them.</div>
+    <textarea id="verb-input" placeholder="recevoir, décevoir, percevoir, connaître, paraître, naître, savoir"></textarea>
+
+    <div class="examples">
+      <span class="pill">aller, venir, faire</span>
+      <span class="pill">savoir — futur: saur-, subj: sach-</span>
+      <span class="pill">naître (être), paraître</span>
+    </div>
+
+    <button class="gen-btn" id="genbtn">
+      <div class="spinner" id="spin"></div>
+      <span id="btnlabel">Generate quiz →</span>
+    </button>
+    <div class="gen-progress" id="genprog"><div class="gen-progress-fill" id="genprogfill"></div></div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-icon">ℹ</div>
+    <p>Your quiz is saved in this browser. It stays loaded until you generate a new one — so you can close the tab and come back anytime.</p>
+  </div>
+</main>
+
+<script>
+let progressInterval = null;
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status show ' + type;
+}
+
+function startFakeProgress() {
+  const fill = document.getElementById('genprogfill');
+  document.getElementById('genprog').classList.add('show');
+  let pct = 0;
+  fill.style.width = '0%';
+  progressInterval = setInterval(function() {
+    // Crawl toward 90% but never reach it — real completion sets 100%
+    const remaining = 90 - pct;
+    pct += remaining * 0.08;
+    fill.style.width = Math.min(pct, 90) + '%';
+  }, 400);
+}
+
+function finishProgress(success) {
+  clearInterval(progressInterval);
+  const fill = document.getElementById('genprogfill');
+  fill.style.transition = 'width 0.3s ease';
+  fill.style.width = '100%';
+  if (!success) {
+    fill.style.background = '#dc2626';
+  }
+  setTimeout(function() {
+    document.getElementById('genprog').classList.remove('show');
+    fill.style.width = '0%';
+    fill.style.background = '';
+  }, 600);
+}
+
+document.getElementById('genbtn').addEventListener('click', async function() {
+  const verbs = document.getElementById('verb-input').value.trim();
+  if (!verbs) { setStatus('Please enter some verbs first.', 'info'); return; }
+
+  const btn = document.getElementById('genbtn');
+  btn.disabled = true;
+  document.getElementById('spin').classList.add('show');
+  document.getElementById('btnlabel').textContent = 'Generating...';
+  setStatus('Sending to Claude — this takes about 15–20 seconds...', 'info');
+  startFakeProgress();
+
+  try {
+    const resp = await fetch('/.netlify/functions/conjugate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verbs: verbs })
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      throw new Error(data.error || 'Server error ' + resp.status);
+    }
+
+    const questions = data.questions;
+    if (!Array.isArray(questions) || questions.length < 5) {
+      throw new Error('Unexpected response format from server');
+    }
+
+    localStorage.setItem('fq_data', JSON.stringify(questions));
+    finishProgress(true);
+    setStatus('✓ ' + questions.length + ' questions generated! Loading your quiz...', 'ok');
+
+    setTimeout(function() { window.location.href = 'index.html'; }, 1000);
+
+  } catch(e) {
+    finishProgress(false);
+    setStatus('Error: ' + e.message + '. Check your API key is set in Netlify environment variables.', 'err');
+    btn.disabled = false;
+    document.getElementById('spin').classList.remove('show');
+    document.getElementById('btnlabel').textContent = 'Try again →';
+  }
+});
+</script>
+</body>
+</html>
