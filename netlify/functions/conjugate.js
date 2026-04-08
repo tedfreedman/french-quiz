@@ -55,7 +55,7 @@ Each object must have exactly these 5 keys:
 "verb" (infinitive string), "tense" (French tense name string), "k" (one of: present/passe/imparfait/futur/cond/condp/plusque/subj/stem), "sub" (subject pronoun string), "ans" (correct conjugation string)`;
 
   const requestBody = JSON.stringify({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }]
   });
