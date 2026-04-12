@@ -7,11 +7,7 @@ exports.handler = async function(event) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY is not set' })
-    };
+    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY is not set' }) };
   }
 
   let verbs;
@@ -25,84 +21,82 @@ exports.handler = async function(event) {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid request body' }) };
   }
 
-  const prompt = `Generate French verb conjugation quiz questions as a JSON array.
+  // Split verbs and process in small batches to stay fast
+  const verbList = verbs.split(',').map(v => v.trim()).filter(Boolean);
+  const allQuestions = [];
 
-VERBS: ${verbs.trim()}
+  for (const verb of verbList) {
+    const prompt = `Generate French conjugation quiz questions for the verb "${verb}" only.
 
-For each verb generate questions for: présent (6 subjects), passé composé (3 subjects), imparfait (3 subjects), futur simple (3 subjects), conditionnel (3 subjects), conditionnel passé (2 subjects), plus-que-parfait (2 subjects), subjonctif présent (3 subjects). Also stem questions: futur/cond stem, participe passé, auxiliaire if être.
+Return ONLY a raw JSON array with no markdown, no backticks, no extra text.
+Each object: {"verb":"${verb}","tense":"TENSE","k":"KEY","sub":"SUBJECT","ans":"ANSWER"}
 
-Output ONLY a JSON array, nothing else, no markdown. Each item: {"verb":"...","tense":"...","k":"...","sub":"...","ans":"..."}
-k must be one of: present, passe, imparfait, futur, cond, condp, plusque, subj, stem`;
+Include these questions:
+- présent: je,tu,il/elle,nous,vous,ils/elles (k="present")
+- passé composé: j'/je,nous,ils/elles (k="passe")
+- imparfait: je,nous,ils/elles (k="imparfait")
+- futur simple: je,nous,ils/elles (k="futur")
+- conditionnel: je,nous,ils/elles (k="cond")
+- conditionnel passé: j'/je,nous (k="condp")
+- plus-que-parfait: j'/je,nous (k="plusque")
+- subjonctif présent: que je,que nous,qu'ils/elles (k="subj")
+- stem: futur/cond stem as "saur-" format (k="stem",sub="futur/cond stem")
+- stem: participe passé (k="stem",sub="participe passé")
+- stem: auxiliaire only if être-verb (k="stem",sub="auxiliaire")
 
-  const requestBody = JSON.stringify({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 6000,
-    messages: [{ role: 'user', content: prompt }]
-  });
+Use correct French accents. No hints in answers.`;
 
-  try {
-    const responseText = await new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.anthropic.com',
-        path: '/v1/messages',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Length': Buffer.byteLength(requestBody)
-        }
-      };
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => { data += chunk; });
-        res.on('end', () => { resolve(data); });
-      });
-      req.on('error', (e) => { reject(e); });
-      req.write(requestBody);
-      req.end();
+    const requestBody = JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
     });
 
-    let apiResponse;
     try {
-      apiResponse = JSON.parse(responseText);
+      const responseText = await new Promise((resolve, reject) => {
+        const options = {
+          hostname: 'api.anthropic.com',
+          path: '/v1/messages',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'Content-Length': Buffer.byteLength(requestBody)
+          }
+        };
+        const req = https.request(options, (res) => {
+          let data = '';
+          res.on('data', chunk => { data += chunk; });
+          res.on('end', () => resolve(data));
+        });
+        req.on('error', reject);
+        req.write(requestBody);
+        req.end();
+      });
+
+      const apiResponse = JSON.parse(responseText);
+      if (apiResponse.error) continue;
+
+      const raw = apiResponse.content.filter(c => c.type === 'text').map(c => c.text).join('');
+      const match = raw.match(/\[[\s\S]*\]/);
+      if (!match) continue;
+
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) allQuestions.push(...parsed);
+
     } catch(e) {
-      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Could not parse Anthropic response: ' + responseText.slice(0, 200) }) };
+      continue;
     }
-
-    if (apiResponse.error) {
-      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Anthropic error: ' + apiResponse.error.message }) };
-    }
-
-    if (!apiResponse.content || !apiResponse.content.length) {
-      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Empty response from Claude', raw: JSON.stringify(apiResponse).slice(0, 300) }) };
-    }
-
-    const raw = apiResponse.content.filter(c => c.type === 'text').map(c => c.text).join('');
-
-    const match = raw.match(/\[[\s\S]*\]/);
-    if (!match) {
-      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'No JSON array found. Claude said: ' + raw.slice(0, 300) }) };
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(match[0]);
-    } catch(e) {
-      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'JSON parse failed: ' + e.message + ' | Raw: ' + match[0].slice(0, 200) }) };
-    }
-
-    if (!Array.isArray(parsed) || parsed.length < 5) {
-      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Array too short: ' + parsed.length + ' items' }) };
-    }
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questions: parsed })
-    };
-
-  } catch(e) {
-    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Function error: ' + e.message }) };
   }
+
+  if (allQuestions.length < 5) {
+    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Could not generate questions. Try fewer verbs.' }) };
+  }
+
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questions: allQuestions })
+  };
 };
